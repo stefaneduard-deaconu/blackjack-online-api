@@ -29,14 +29,33 @@ const io = new Server(server, {
     }
 })
 
+let messages = {
+
+}
 // listen to event:
 io.on('connection', (socket) => {
+
     console.log(socket.id)
 
+    socket.on('join_room', (data) => {
+        console.log('joined_room:', data.room)
+        if (messages[data.room]) {
+            messages[data.room] = []
+        }
+        socket.join(data.room)
+    })
     socket.on('send_message', (data) => {
-        // broadcast
-        socket.broadcast.emit('receive_message', {'data': data})
-        console.log(data)
+        console.log('message_sent:', data)
+        console.log(messages)
+        if (data.room in messages) {
+            messages[data.room].push(data.message)
+        } else {
+            messages[data.room] = [data.message]
+        }
+        console.log(messages[data.room])
+        socket.to(data.room).emit('receive_messages', {
+            messages: messages[data.room]
+        })
     })
 })
 
