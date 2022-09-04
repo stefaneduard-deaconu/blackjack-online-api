@@ -29,32 +29,63 @@ const io = new Server(server, {
     }
 })
 
-let messages = {
+let onePlayerRooms = []
+let fullRooms = []
+let nextRoomId = 1;
 
-}
 // listen to event:
 io.on('connection', (socket) => {
 
     console.log(socket.id)
 
-    socket.on('join_room', (data) => {
-        console.log('joined_room:', data.room)
-        if (messages[data.room]) {
-            messages[data.room] = []
-        }
-        socket.join(data.room)
-    })
-    socket.on('send_message', (data) => {
-        console.log('message_sent:', data)
-        console.log(messages)
-        if (data.room in messages) {
-            messages[data.room].push(data.message)
+    socket.on('join_room', (_) => {
+        console.log(onePlayerRooms)
+        console.log(fullRooms)
+
+        // find a room, or create one
+        let joinedId;
+        if (!onePlayerRooms.length) {
+            onePlayerRooms.push({
+                joinedId: nextRoomId,
+                players: [socket.id]
+            })
+
+            socket.join(nextRoomId)
+            socket.to(nextRoomId).emit('joined_room', {
+                joinedId: nextRoomId,
+                waiting: true
+            })
+
+            nextRoomId++;
         } else {
-            messages[data.room] = [data.message]
+            let {
+                joinedId, players
+            } = onePlayerRooms[0];
+
+            if (players[0] == socket.id) {
+                console.log('Player already joined the empty room')
+                return;
+            }
+
+            socket.join(joinedId)
+            socket.to(joinedId).emit('joined_room', {
+                joinedId: joinedId,
+                waiting: false
+            })
+            socket.emit('joined_room', {
+                joinedId: joinedId,
+                waiting: false
+            })
+
+            fullRooms.push(onePlayerRooms[0])
+            onePlayerRooms = onePlayerRooms.slice(1);
         }
-        console.log(messages[data.room])
-        socket.to(data.room).emit('receive_messages', {
-            messages: messages[data.room]
+    })
+    socket.on('send_option', (data) => {
+        console.log('send_option:', data)
+
+        socket.to(data.joinedId).emit('receive_rival_option', {
+            option: data.option
         })
     })
 })
