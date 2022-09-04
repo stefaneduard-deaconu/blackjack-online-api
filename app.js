@@ -1,20 +1,46 @@
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const http = require("http");
+const {Server} = require("socket.io");
+const cors = require('cors')
+
 
 var app = express();
 
+// cors
+app.use(cors())
+
 app.use(logger('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+// constants:
+const PORT = process.env.PORT || 3001;
 
-module.exports = app;
+
+// set up the recommended http server for Socket.IO
+const server = http.createServer(app);
+
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ['GET', 'POST']
+    }
+})
+
+// listen to event:
+io.on('connection', (socket) => {
+    console.log(socket.id)
+
+    socket.on('send_message', (data) => {
+        // broadcast
+        socket.broadcast.emit('receive_message', {'data': data})
+        console.log(data)
+    })
+})
+
+
+server.listen(PORT, () => {
+    console.log(`Server listening on ${PORT}`)
+})
