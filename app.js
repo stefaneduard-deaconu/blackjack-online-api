@@ -53,7 +53,9 @@ io.on('connection', (socket) => {
             socket.join(nextRoomId)
             socket.to(nextRoomId).emit('joined_room', {
                 joinedId: nextRoomId,
-                waiting: true
+                waiting: true,
+                // he's the first, so he will play first
+                playerOrder: 0
             })
 
             nextRoomId++;
@@ -70,11 +72,13 @@ io.on('connection', (socket) => {
             socket.join(joinedId)
             socket.to(joinedId).emit('joined_room', {
                 joinedId: joinedId,
-                waiting: false
+                waiting: false,
+                playerOrder: 0
             })
             socket.emit('joined_room', {
                 joinedId: joinedId,
-                waiting: false
+                waiting: false,
+                playerOrder: 1
             })
 
             fullRooms.push(onePlayerRooms[0])
@@ -86,6 +90,14 @@ io.on('connection', (socket) => {
 
         socket.to(data.joinedId).emit('receive_rival_option', {
             option: data.option
+        })
+    })
+
+    socket.on('update_match', (data) => {
+        console.log('update_match:', data)
+
+        socket.to(data.joinedMatch).emit('receive_match_update', {
+            match: data.match
         })
     })
 })
